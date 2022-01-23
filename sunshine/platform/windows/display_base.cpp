@@ -190,6 +190,13 @@ int display_base_t::init(int framerate, const std::string &display_name) {
 
   adapter_p->Release();
 
+  // qsv/libmfx requires a multithreaded device when being instantiated
+  // TODO: FIXME: will this break or impact other encoders? could set this
+  // only in the intel case if it's an issue.
+  ID3D10Multithread *pMultithread;  
+  device->QueryInterface(IID_ID3D10Multithread, (void **)&pMultithread);
+  pMultithread->SetMultithreadProtected(true);
+
   if(FAILED(status)) {
     BOOST_LOG(error) << "Failed to create D3D11 device [0x"sv << util::hex(status).to_string_view() << ']';
 
@@ -440,8 +447,13 @@ std::shared_ptr<display_t> display(mem_type_e hwdevice_type, const std::string &
     if(!disp->init(framerate, display_name)) {
       return disp;
     }
-  }
-  else if(hwdevice_type == mem_type_e::system) {
+  } else if(hwdevice_type == mem_type_e::qsv) {
+    auto disp = std::make_shared<dxgi::display_qsv_t>();
+
+    if(!disp->init(framerate, display_name)) {
+      return disp;
+    }
+  } else if(hwdevice_type == mem_type_e::system) {
     auto disp = std::make_shared<dxgi::display_ram_t>();
 
     if(!disp->init(framerate, display_name)) {

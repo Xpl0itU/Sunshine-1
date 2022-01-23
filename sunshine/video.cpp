@@ -22,6 +22,7 @@ extern "C" {
 #ifdef _WIN32
 extern "C" {
 #include <libavutil/hwcontext_d3d11va.h>
+#include <libavutil/hwcontext_qsv.h>
 }
 #endif
 
@@ -30,6 +31,8 @@ namespace video {
 
 constexpr auto hevc_nalu = "\000\000\000\001("sv;
 constexpr auto h264_nalu = "\000\000\000\001e"sv;
+constexpr auto qsv_h264_nalu = "\000\000\000\001%"sv;
+constexpr auto qsv_hevc_nalu = "\000\000\000\001&"sv;
 
 void free_ctx(AVCodecContext *ctx) {
   avcodec_free_context(&ctx);
@@ -70,6 +73,7 @@ platf::mem_type_e map_dev_type(AVHWDeviceType type);
 platf::pix_fmt_e map_pix_fmt(AVPixelFormat fmt);
 
 util::Either<buffer_t, int> dxgi_make_hwdevice_ctx(platf::hwdevice_t *hwdevice_ctx);
+util::Either<buffer_t, int> qsv_make_hwdevice_ctx(platf::hwdevice_t *hwdevice_ctx);
 util::Either<buffer_t, int> vaapi_make_hwdevice_ctx(platf::hwdevice_t *hwdevice_ctx);
 util::Either<buffer_t, int> cuda_make_hwdevice_ctx(platf::hwdevice_t *hwdevice_ctx);
 
@@ -476,6 +480,37 @@ static encoder_t amdvce {
 };
 #endif
 
+#ifdef _WIN32
+static encoder_t intel_qsv {
+  "intel_qsv"sv,
+  { FF_PROFILE_H264_HIGH, FF_PROFILE_HEVC_MAIN },  
+  AV_HWDEVICE_TYPE_QSV,
+  AV_PIX_FMT_QSV,
+  AV_PIX_FMT_NV12, 
+  AV_PIX_FMT_P010,
+  {
+    {      
+      { "preset"s, &config::video.intel.preset },     
+      { "forced_idr"s, 1 },
+    },    
+    std::nullopt,
+    "hevc_qsv"s,
+  },
+  {
+    {      
+      { "pic_timing_sei"s, 0 },     
+      { "idr_interval"s, std::numeric_limits<int>::max() },
+      { "forced_idr"s, 1 },      
+      { "preset"s, &config::video.intel.preset },      
+    },    
+    std::nullopt,
+    "h264_qsv"s
+  },
+  DEFAULT,
+  qsv_make_hwdevice_ctx  
+};
+#endif
+
 static encoder_t software {
   "software"sv,
   { FF_PROFILE_H264_HIGH, FF_PROFILE_HEVC_MAIN, FF_PROFILE_HEVC_MAIN_10 },
@@ -542,6 +577,7 @@ static std::vector<encoder_t> encoders {
   nvenc,
 #ifdef _WIN32
   amdvce,
+  intel_qsv,
 #endif
 #ifdef __linux__
   vaapi,
@@ -994,9 +1030,18 @@ std::optional<session_t> make_session(const encoder_t &encoder, const config_t &
   };
 
   if(!video_format[encoder_t::NALU_PREFIX_5b]) {
-    auto nalu_prefix = config.videoFormat ? hevc_nalu : h264_nalu;
 
-    session.replacements.emplace_back(nalu_prefix.substr(1), nalu_prefix);
+    // TODO: FIXME
+    // should probably pull these up into a config or something; does it make sense to put them into the
+    // encoder_t strut?
+    
+    if(encoder.name == "intel_qsv") {
+      auto nalu_prefix = config.videoFormat ? qsv_hevc_nalu : qsv_h264_nalu;
+      session.replacements.emplace_back(nalu_prefix.substr(1), nalu_prefix);
+    } else {
+      auto nalu_prefix = config.videoFormat ? hevc_nalu : h264_nalu;
+      session.replacements.emplace_back(nalu_prefix.substr(1), nalu_prefix);
+    }
   }
 
   return std::make_optional(std::move(session));
@@ -1656,7 +1701,10 @@ int hwframe_ctx(ctx_t &ctx, buffer_t &hwdevice, AVPixelFormat format) {
   frame_ctx->sw_format         = format;
   frame_ctx->height            = ctx->height;
   frame_ctx->width             = ctx->width;
-  frame_ctx->initial_pool_size = 0;
+  // initial pool size required for qsv. not sure what value is optimal
+  // also, if this breaks or impacts other encoders, will need to have this 
+  // configured somewhere
+  frame_ctx->initial_pool_size = 64;
 
   if(auto err = av_hwframe_ctx_init(frame_ref.get()); err < 0) {
     return err;
@@ -1738,6 +1786,55 @@ util::Either<buffer_t, int> dxgi_make_hwdevice_ctx(platf::hwdevice_t *hwdevice_c
 
   return ctx_buf;
 }
+
+util::Either<buffer_t, int> qsv_make_hwdevice_ctx(platf::hwdevice_t *hwdevice_ctx) {
+  buffer_t ctx_buf { av_hwdevice_ctx_alloc(AV_HWDEVICE_TYPE_D3D11VA) };
+  auto ctx = (AVD3D11VADeviceContext *)((AVHWDeviceContext *)ctx_buf->data)->hwctx;
+
+  std::fill_n((std::uint8_t *)ctx, sizeof(AVD3D11VADeviceContext), 0);
+
+  auto device = (ID3D11Device *)hwdevice_ctx->data;
+
+  device->AddRef();
+  ctx->device = device;
+
+  ctx->lock_ctx = (void *)1;
+  ctx->lock     = do_nothing;
+  ctx->unlock   = do_nothing;
+
+  auto err = av_hwdevice_ctx_init(ctx_buf.get());
+  if(err) {
+    char err_str[AV_ERROR_MAX_STRING_SIZE] { 0 };
+    BOOST_LOG(error) << "Failed to create FFMpeg hardware device child context: "sv << av_make_error_string(err_str, AV_ERROR_MAX_STRING_SIZE, err);
+
+    return err;
+  }
+
+
+  buffer_t hw_device_buf;
+  auto ret = av_hwdevice_ctx_create_derived(&hw_device_buf, AV_HWDEVICE_TYPE_QSV, ctx_buf.get(), 0);
+
+// comment above, and uncomment below block as well as map AV_HWDEVICE_TYPE_QSV-->platf::mem_type_e::system (~line 1873)
+// to set software path for qsv
+/*
+  buffer_t hw_device_buf;
+
+  AVDictionary *options { nullptr };
+  av_dict_set(&options, "child_device_type", "d3d11va", 0);
+
+  auto ret = av_hwdevice_ctx_create(&hw_device_buf, AV_HWDEVICE_TYPE_QSV,
+                                 "auto", options, 0);
+ */
+
+  if(ret) {
+    char err_str[AV_ERROR_MAX_STRING_SIZE] { 0 };
+    BOOST_LOG(error) << "Failed to create FFMpeg hardware device context: "sv << av_make_error_string(err_str, AV_ERROR_MAX_STRING_SIZE, ret);
+
+    return ret;
+  }
+
+  return hw_device_buf;
+}
 #endif
 
 int start_capture_async(capture_thread_async_ctx_t &capture_thread_ctx) {
@@ -1772,6 +1869,8 @@ platf::mem_type_e map_dev_type(AVHWDeviceType type) {
   switch(type) {
   case AV_HWDEVICE_TYPE_D3D11VA:
     return platf::mem_type_e::dxgi;
+  case AV_HWDEVICE_TYPE_QSV:
+    return platf::mem_type_e::qsv;    
   case AV_HWDEVICE_TYPE_VAAPI:
     return platf::mem_type_e::vaapi;
   case AV_HWDEVICE_TYPE_CUDA:

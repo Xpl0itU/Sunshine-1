@@ -31,10 +31,10 @@ list(APPEND SUNSHINE_COMPILE_OPTIONS -Wall -Wno-missing-braces -Wno-maybe-uninit
 if(WIN32)
 	enable_language(RC)
 	set(CMAKE_RC_COMPILER windres)
-	file(
-		DOWNLOAD "https://github.com/TheElixZammuto/sunshine-prebuilt/releases/download/1.0.0/pre-compiled.zip" "${CMAKE_CURRENT_BINARY_DIR}/pre-compiled.zip"
+	file(		
+		DOWNLOAD "https://github.com/lvaskys/Sunshine-Windows-Prebuilt/releases/download/v1.0.1/pre-compiled.zip" "${CMAKE_CURRENT_BINARY_DIR}/pre-compiled.zip"
 		TIMEOUT 60
-		EXPECTED_HASH SHA256=5d59986bd7f619eaaf82b2dd56b5127b747c9cbe8db61e3b898ff6b485298ed6)
+		EXPECTED_HASH SHA256=2e7b5249c3b232ad14813170257ee108e60620991006bd488ceb340d52eadec3)
 
 	file(ARCHIVE_EXTRACT
 		INPUT "${CMAKE_CURRENT_BINARY_DIR}/pre-compiled.zip"
@@ -91,6 +91,7 @@ if(WIN32)
 		${SUNSHINE_PREPARED_BINARIES}/lib/libx264.a
 		${SUNSHINE_PREPARED_BINARIES}/lib/libx265.a
 		${SUNSHINE_PREPARED_BINARIES}/lib/libhdr10plus.a
+		${SUNSHINE_PREPARED_BINARIES}/lib/libmfx.a
 		z lzma bcrypt libiconv.a)
 
 	list(PREPEND PLATFORM_LIBRARIES

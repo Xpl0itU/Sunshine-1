@@ -33,6 +33,10 @@ struct video_t {
     std::optional<int> rc_hevc;
     int coder;
   } amd;
+  
+  struct {
+    std::optional<int> preset;
+  } intel;
 
   std::string encoder;
   std::string adapter_name;
