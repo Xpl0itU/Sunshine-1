@@ -90,6 +90,7 @@ enum class mem_type_e {
   vaapi,
   dxgi,
   cuda,
+  qsv,
   unknown
 };
 

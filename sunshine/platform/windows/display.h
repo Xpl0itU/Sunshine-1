@@ -10,6 +10,7 @@
 #include <d3dcommon.h>
 #include <dxgi.h>
 #include <dxgi1_2.h>
+#include <d3d10.h>
 
 #include "sunshine/platform/common.h"
 #include "sunshine/utility.h"
@@ -170,6 +171,12 @@ public:
   texture2d_t src;
   gpu_cursor_t cursor;
 };
+
+class display_qsv_t : public display_vram_t {
+public:
+  std::shared_ptr<platf::hwdevice_t> make_hwdevice(pix_fmt_e pix_fmt) override;
+};
+
 } // namespace platf::dxgi
 
 #endif

@@ -162,6 +162,34 @@ int coder_from_view(const std::string_view &coder) {
 }
 } // namespace amd
 
+namespace intel {
+enum preset_e : int {
+  veryslow,
+  slower,
+  slow,
+  medium,
+  fast,
+  faster,
+  veryfast,
+};
+
+std::optional<preset_e> preset_from_view(const std::string_view &preset) {
+#define _CONVERT_(x) if(preset == #x##sv) return x
+  _CONVERT_(veryslow);
+  _CONVERT_(slower);
+  _CONVERT_(slow);
+  _CONVERT_(medium);
+  _CONVERT_(fast);
+  _CONVERT_(faster);
+  _CONVERT_(veryfast);
+  if(preset == "default"sv) return medium;
+#undef _CONVERT_
+  return std::nullopt;
+}
+
+} // namespace intel
+
+
 video_t video {
   28, // qp
 
@@ -183,6 +211,10 @@ video_t video {
     std::nullopt,
     std::nullopt,
     -1 }, // amd
+  
+  {
+    intel::medium,
+     }, // intel    
 
   {}, // encoder
   {}, // adapter_name
@@ -684,6 +716,8 @@ void apply_config(std::unordered_map<std::string, std::string> &&vars) {
     video.amd.rc_h264 = amd::rc_h264_from_view(rc);
     video.amd.rc_hevc = amd::rc_hevc_from_view(rc);
   }
+
+  int_f(vars, "intel_preset", video.intel.preset, intel::preset_from_view);
 
   string_f(vars, "encoder", video.encoder);
   string_f(vars, "adapter_name", video.adapter_name);

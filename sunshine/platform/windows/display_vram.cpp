@@ -8,6 +8,7 @@
 extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavutil/hwcontext_d3d11va.h>
+#include <mfx/mfxvideo.h>
 }
 
 #include "display.h"
@@ -403,24 +404,9 @@ public:
       return -1;
     }
 
-    // Need to have something refcounted
-    if(!frame->buf[0]) {
-      frame->buf[0] = av_buffer_allocz(sizeof(AVD3D11FrameDescriptor));
-    }
+    int ret = set_impl_frame(frame);
 
-    auto desc     = (AVD3D11FrameDescriptor *)frame->buf[0]->data;
-    desc->texture = (ID3D11Texture2D *)img.data;
-    desc->index   = 0;
-
-    frame->data[0] = img.data;
-    frame->data[1] = 0;
-
-    frame->linesize[0] = img.row_pitch;
-
-    frame->height = img.height;
-    frame->width  = img.width;
-
-    return 0;
+    return ret;
   }
 
   int init(
@@ -529,6 +515,27 @@ private:
     _init_view_port(0.0f, 0.0f, width, height);
   }
 
+  virtual int set_impl_frame(AVFrame *frame){
+    // Need to have something refcounted
+    if(!frame->buf[0]) {
+      frame->buf[0] = av_buffer_allocz(sizeof(AVD3D11FrameDescriptor));
+    }
+
+    auto desc     = (AVD3D11FrameDescriptor *)frame->buf[0]->data;
+    desc->texture = (ID3D11Texture2D *)img.data;
+    desc->index   = 0;
+
+    frame->data[0] = img.data;
+    frame->data[1] = 0;
+
+    frame->linesize[0] = img.row_pitch;
+
+    frame->height = img.height;
+    frame->width  = img.width;
+
+    return 0;
+  }
+
 public:
   frame_t hwframe;
 
@@ -561,6 +568,27 @@ public:
   DXGI_FORMAT format;
 
   device_ctx_t::pointer device_ctx_p;
+};
+
+class qsv_hwdevice_t : public hwdevice_t {
+  private:
+    int set_impl_frame(AVFrame *frame){
+      if(!frame->buf[0]) {
+        if(av_hwframe_get_buffer(frame->hw_frames_ctx, frame, 0)) {
+            BOOST_LOG(error) << "Couldn't get hwframe for QSV"sv;
+            return -1;
+        }
+
+        ((mfxHDLPair*)((mfxFrameSurface1*)(frame->data[3]))->Data.MemId)->first = img.data;
+
+        frame->linesize[0] = img.row_pitch;
+
+        frame->height = img.height;
+        frame->width  = img.width;
+      }
+
+      return 0;
+    }
 };
 
 capture_e display_vram_t::capture(snapshot_cb_t &&snapshot_cb, std::shared_ptr<::platf::img_t> img, bool *cursor) {
@@ -841,6 +869,28 @@ std::shared_ptr<platf::hwdevice_t> display_vram_t::make_hwdevice(pix_fmt_e pix_f
   }
 
   auto hwdevice = std::make_shared<hwdevice_t>();
+
+  auto ret = hwdevice->init(
+    shared_from_this(),
+    device.get(),
+    device_ctx.get(),
+    pix_fmt);
+
+  if(ret) {
+    return nullptr;
+  }
+
+  return hwdevice;
+}
+
+std::shared_ptr<platf::hwdevice_t> display_qsv_t::make_hwdevice(pix_fmt_e pix_fmt) {
+  if(pix_fmt != platf::pix_fmt_e::nv12) {
+    BOOST_LOG(error) << "display_qsv_t doesn't support pixel format ["sv << from_pix_fmt(pix_fmt) << ']';
+
+    return nullptr;
+  }
+
+  auto hwdevice = std::make_shared<qsv_hwdevice_t>();
 
   auto ret = hwdevice->init(
     shared_from_this(),
