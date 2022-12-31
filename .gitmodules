@@ -42,3 +42,6 @@
 	path = third-party/ffmpeg-macos-aarch64
 	url = https://github.com/LizardByte/build-deps
 	branch = ffmpeg-macos-aarch64
+[submodule "third-party/tray"]
+	path = third-party/tray
+	url = git@github.com:TheElixZammuto/tray.git

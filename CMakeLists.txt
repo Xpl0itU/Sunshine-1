@@ -61,6 +61,9 @@ set(UPNPC_NO_INSTALL ON CACHE BOOL "Don't install any libraries build for miniup
 add_subdirectory(third-party/miniupnp/miniupnpc)
 include_directories(third-party/miniupnp/miniupnpc/include)
 
+add_subdirectory(third-party/tray)
+include_directories(third-party/tray)
+
 find_package(Threads REQUIRED)
 find_package(OpenSSL REQUIRED)
 find_package(PkgConfig REQUIRED)
@@ -382,6 +385,9 @@ set(SUNSHINE_TARGET_FILES
         src/round_robin.h
         ${PLATFORM_TARGET_FILES})
 
+set(SUNSHINE_TRAY_TARGET_FILES
+        src/tray.cpp)
+
 set_source_files_properties(src/upnp.cpp PROPERTIES COMPILE_FLAGS -Wno-pedantic)
 
 # Pre-compiled binaries
@@ -471,12 +477,14 @@ if(NOT WIN32)
 endif()
 
 add_executable(sunshine ${SUNSHINE_TARGET_FILES})
+add_executable(sunshine-tray ${SUNSHINE_TRAY_TARGET_FILES})
 
 if(WIN32)
     set_target_properties(sunshine PROPERTIES LINK_SEARCH_START_STATIC 1)
 endif()
 
 target_link_libraries(sunshine ${SUNSHINE_EXTERNAL_LIBRARIES} ${EXTRA_LIBS})
+target_link_libraries(sunshine-tray tray ${CURL_STATIC_LIBRARIES} ${OPENSSL_LIBRARIES})
 target_compile_definitions(sunshine PUBLIC ${SUNSHINE_DEFINITIONS})
 set_target_properties(sunshine PROPERTIES CXX_STANDARD 17
         VERSION ${PROJECT_VERSION}
