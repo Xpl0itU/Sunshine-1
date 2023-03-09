@@ -849,3 +849,4 @@ jobs:
           release-tag: ${{ needs.setup_release.outputs.release_tag }}
           installers-regex: '\.exe$'  # only .exe files
           token: ${{ secrets.GH_BOT_TOKEN }}
+
