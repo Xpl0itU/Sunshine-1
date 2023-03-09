@@ -9,7 +9,7 @@ name: yaml lint
 
 on:
   pull_request:
-    branches: [master, nightly]
+    branches: [master, nightly, keep-first-gamepad]
     types: [opened, synchronize, reopened]
 
 concurrency:

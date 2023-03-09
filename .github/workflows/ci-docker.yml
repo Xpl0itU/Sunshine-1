@@ -22,10 +22,10 @@ name: CI Docker
 
 on:
   pull_request:
-    branches: [master, nightly]
+    branches: [master, nightly, keep-first-gamepad]
     types: [opened, synchronize, reopened]
   push:
-    branches: [master, nightly]
+    branches: [master, nightly, keep-first-gamepad]
   workflow_dispatch:
 
 concurrency:
@@ -310,14 +310,14 @@ jobs:
             Docker-buildx${{ matrix.tag }}-
 
       - name: Log in to Docker Hub
-        if: ${{ steps.prepare.outputs.push == 'true' }}  # PRs do not have access to secrets
+        if: ${{ steps.prepare.outputs.push == 'true' }} # PRs do not have access to secrets
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
 
       - name: Log in to the Container registry
-        if: ${{ steps.prepare.outputs.push == 'true' }}  # PRs do not have access to secrets
+        if: ${{ steps.prepare.outputs.push == 'true' }} # PRs do not have access to secrets
         uses: docker/login-action@v2
         with:
           registry: ghcr.io
@@ -404,7 +404,7 @@ jobs:
         uses: peter-evans/dockerhub-description@v3
         with:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
-          password: ${{ secrets.DOCKER_HUB_PASSWORD }}  # token is not currently supported
+          password: ${{ secrets.DOCKER_HUB_PASSWORD }} # token is not currently supported
           repository: ${{ env.BASE_TAG }}
           short-description: ${{ github.event.repository.description }}
           readme-filepath: ./DOCKER_README.md

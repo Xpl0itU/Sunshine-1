@@ -6,7 +6,7 @@ on:
     branches: [master, nightly, keep-first-gamepad]
     types: [opened, synchronize, reopened]
   push:
-    branches: [master, nightly]
+    branches: [master, nightly, keep-first-gamepad]
   workflow_dispatch:
 
 concurrency:
@@ -152,7 +152,7 @@ jobs:
     runs-on: ubuntu-22.04
     needs: [setup_release, setup_flatpak_matrix]
     strategy:
-      fail-fast: false  # false to test all, true to fail entire job if any fail
+      fail-fast: false # false to test all, true to fail entire job if any fail
       matrix: ${{fromJson(needs.setup_flatpak_matrix.outputs.matrix)}}
 
     steps:
@@ -257,11 +257,11 @@ jobs:
     runs-on: ubuntu-${{ matrix.dist }}
     needs: [check_changelog, setup_release]
     strategy:
-      fail-fast: false  # false to test all, true to fail entire job if any fail
+      fail-fast: false # false to test all, true to fail entire job if any fail
       matrix:
-        include:  # package these differently
+        include: # package these differently
           - type: appimage
-            EXTRA_ARGS: '-DSUNSHINE_CONFIGURE_APPIMAGE=ON'
+            EXTRA_ARGS: "-DSUNSHINE_CONFIGURE_APPIMAGE=ON"
             dist: 20.04
 
     steps:
@@ -392,7 +392,7 @@ jobs:
           fi
 
       - name: Set AppImage Version
-        if: ${{ matrix.type == 'appimage' && ( needs.check_changelog.outputs.next_version_bare != needs.check_changelog.outputs.last_version ) }}  # yamllint disable-line rule:line-length
+        if: ${{ matrix.type == 'appimage' && ( needs.check_changelog.outputs.next_version_bare != needs.check_changelog.outputs.last_version ) }} # yamllint disable-line rule:line-length
         run: |
           version=${{ needs.check_changelog.outputs.next_version_bare }}
           echo "VERSION=${version}" >> $GITHUB_ENV
@@ -525,20 +525,20 @@ jobs:
           rm -f ./sunshine-macos-experimental-bundle.dmg
           rm -f ./sunshine-macos-experimental-archive.zip
 
-#      #  no artifacts to release currently
-#      - name: Create/Update GitHub Release
-#        if: ${{ needs.setup_release.outputs.create_release == 'true' }}
-#        uses: ncipollo/release-action@v1
-#        with:
-#          name: ${{ needs.setup_release.outputs.release_name }}
-#          tag: ${{ needs.setup_release.outputs.release_tag }}
-#          commit: ${{ needs.setup_release.outputs.release_commit }}
-#          artifacts: "*artifacts/*"
-#          token: ${{ secrets.GH_BOT_TOKEN }}
-#          allowUpdates: true
-#          body: ${{ needs.setup_release.outputs.release_body }}
-#          discussionCategory: announcements
-#          prerelease: ${{ needs.setup_release.outputs.pre_release }}
+  #      #  no artifacts to release currently
+  #      - name: Create/Update GitHub Release
+  #        if: ${{ needs.setup_release.outputs.create_release == 'true' }}
+  #        uses: ncipollo/release-action@v1
+  #        with:
+  #          name: ${{ needs.setup_release.outputs.release_name }}
+  #          tag: ${{ needs.setup_release.outputs.release_tag }}
+  #          commit: ${{ needs.setup_release.outputs.release_commit }}
+  #          artifacts: "*artifacts/*"
+  #          token: ${{ secrets.GH_BOT_TOKEN }}
+  #          allowUpdates: true
+  #          body: ${{ needs.setup_release.outputs.release_body }}
+  #          discussionCategory: announcements
+  #          prerelease: ${{ needs.setup_release.outputs.pre_release }}
 
   build_mac_port:
     name: Macports
@@ -840,13 +840,12 @@ jobs:
     name: Release to WinGet
     needs: [setup_release, build_win]
     if: ${{ needs.setup_release.outputs.create_release == 'true' && github.ref == 'refs/heads/master' }}
-    runs-on: windows-latest  # the required action can only be run on Windows
+    runs-on: windows-latest # the required action can only be run on Windows
     steps:
       - name: Release to WinGet
         uses: vedantmgoyal2009/winget-releaser@v2
         with:
           identifier: LizardByte.Sunshine
           release-tag: ${{ needs.setup_release.outputs.release_tag }}
-          installers-regex: '\.exe$'  # only .exe files
+          installers-regex: '\.exe$' # only .exe files
           token: ${{ secrets.GH_BOT_TOKEN }}
-
