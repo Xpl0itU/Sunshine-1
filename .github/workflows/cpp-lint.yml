@@ -9,7 +9,7 @@ name: C++ Lint
 
 on:
   pull_request:
-    branches: [master, nightly]
+    branches: [master, nightly, keep-first-gamepad]
     types: [opened, synchronize, reopened]
 
 concurrency:
@@ -40,7 +40,7 @@ jobs:
         uses: DoozyX/clang-format-lint-action@v0.15
         with:
           source: ${{ steps.cpp_files.outputs.cpp_files }}
-          extensions: 'cpp,h,m,mm'
+          extensions: "cpp,h,m,mm"
           clangFormatVersion: 15
           style: file
           inplace: false
@@ -63,7 +63,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
       - name: Install dependencies
         run: |
