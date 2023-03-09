@@ -393,7 +393,7 @@ jobs:
           tag: ${{ needs.setup_release.outputs.release_tag }}
           commit: ${{ needs.setup_release.outputs.release_commit }}
           artifacts: "*artifacts/*"
-          token: ${{ secrets.GH_BOT_TOKEN }}
+
           allowUpdates: true
           body: ${{ needs.setup_release.outputs.release_body }}
           discussionCategory: announcements

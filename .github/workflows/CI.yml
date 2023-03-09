@@ -246,7 +246,6 @@ jobs:
           tag: ${{ needs.setup_release.outputs.release_tag }}
           commit: ${{ needs.setup_release.outputs.release_commit }}
           artifacts: "*artifacts/*"
-          token: ${{ secrets.GH_BOT_TOKEN }}
           allowUpdates: true
           body: ${{ needs.setup_release.outputs.release_body }}
           discussionCategory: announcements
@@ -457,7 +456,6 @@ jobs:
           tag: ${{ needs.setup_release.outputs.release_tag }}
           commit: ${{ needs.setup_release.outputs.release_commit }}
           artifacts: "*artifacts/*"
-          token: ${{ secrets.GH_BOT_TOKEN }}
           allowUpdates: true
           body: ${{ needs.setup_release.outputs.release_body }}
           discussionCategory: announcements
@@ -534,7 +532,6 @@ jobs:
   #          tag: ${{ needs.setup_release.outputs.release_tag }}
   #          commit: ${{ needs.setup_release.outputs.release_commit }}
   #          artifacts: "*artifacts/*"
-  #          token: ${{ secrets.GH_BOT_TOKEN }}
   #          allowUpdates: true
   #          body: ${{ needs.setup_release.outputs.release_body }}
   #          discussionCategory: announcements
@@ -748,7 +745,6 @@ jobs:
           tag: ${{ needs.setup_release.outputs.release_tag }}
           commit: ${{ needs.setup_release.outputs.release_commit }}
           artifacts: "*artifacts/*"
-          token: ${{ secrets.GH_BOT_TOKEN }}
           allowUpdates: true
           body: ${{ needs.setup_release.outputs.release_body }}
           discussionCategory: announcements
@@ -830,7 +826,6 @@ jobs:
           tag: ${{ needs.setup_release.outputs.release_tag }}
           commit: ${{ needs.setup_release.outputs.release_commit }}
           artifacts: "*artifacts/*"
-          token: ${{ secrets.GH_BOT_TOKEN }}
           allowUpdates: true
           body: ${{ needs.setup_release.outputs.release_body }}
           discussionCategory: announcements
@@ -848,4 +843,4 @@ jobs:
           identifier: LizardByte.Sunshine
           release-tag: ${{ needs.setup_release.outputs.release_tag }}
           installers-regex: '\.exe$' # only .exe files
-          token: ${{ secrets.GH_BOT_TOKEN }}
+
