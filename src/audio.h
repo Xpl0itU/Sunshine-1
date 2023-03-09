@@ -1,5 +1,4 @@
-#ifndef SUNSHINE_AUDIO_H
-#define SUNSHINE_AUDIO_H
+#pragma once
 
 #include "thread_safe.h"
 #include "utility.h"
@@ -43,5 +42,3 @@ using buffer_t = util::buffer_t<std::uint8_t>;
 using packet_t = std::pair<void *, buffer_t>;
 void capture(safe::mail_t mail, config_t config, void *channel_data);
 } // namespace audio
-
-#endif
